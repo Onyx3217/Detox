@@ -3,8 +3,9 @@ package com.detox.app
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,15 +37,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.detox.core.designsystem.theme.BackgroundDark
-import com.detox.core.designsystem.theme.DangerRed
+import com.detox.core.designsystem.theme.CardBorder
+import com.detox.core.designsystem.theme.EmberCore
 import com.detox.core.designsystem.theme.EmberPrimary
 import com.detox.core.designsystem.theme.EmberSecondary
-import com.detox.core.designsystem.theme.NeonAccent
+import com.detox.core.designsystem.theme.NeonCyan
+import com.detox.core.designsystem.theme.NeonViolet
 import com.detox.core.designsystem.theme.SurfaceDark
 import com.detox.core.designsystem.theme.SurfaceElevated
 import com.detox.core.designsystem.theme.TextMuted
@@ -77,7 +81,7 @@ fun AppManagementScreen() {
 
     LaunchedEffect(Unit) {
         val loadedApps = withContext(Dispatchers.IO) {
-            getInstalledApps(context, blockedPackages)
+            getInstalledApps(context)
         }
         appsList.clear()
         appsList.addAll(loadedApps)
@@ -90,25 +94,49 @@ fun AppManagementScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text(
-                text = "GESTION DES APPLICATIONS",
-                color = TextPrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Choisissez quelles applications restreindre quand le quota n'est pas rempli.",
-                color = TextSecondary,
-                fontSize = 13.sp
-            )
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "FILTRES & RESTRICTIONS",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.5.sp
+                    )
+                    Text(
+                        text = "${blockedPackages.size} applications sous surveillance",
+                        color = EmberSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Surface(
+                    color = SurfaceDark,
+                    border = BorderStroke(1.dp, CardBorder),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "AUTOMATIQUE",
+                        color = NeonCyan,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Search Bar
+            // Search Bar with glow border
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -116,14 +144,14 @@ fun AppManagementScreen() {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = EmberPrimary,
-                    unfocusedBorderColor = SurfaceElevated,
+                    focusedBorderColor = NeonCyan,
+                    unfocusedBorderColor = CardBorder,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
                     focusedContainerColor = SurfaceDark,
                     unfocusedContainerColor = SurfaceDark
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -164,9 +192,12 @@ private fun AppRow(
     isBlocked: Boolean,
     onToggle: (Boolean) -> Unit
 ) {
+    val borderColor = if (isBlocked) EmberPrimary.copy(alpha = 0.5f) else CardBorder
+
     Surface(
         color = SurfaceDark,
-        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, borderColor),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -180,18 +211,29 @@ private fun AppRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Colored letter badge
+                // Colored letter badge with glow
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
-                        .background(if (isBlocked) EmberPrimary.copy(alpha = 0.2f) else SurfaceElevated)
+                        .background(
+                            if (isBlocked) {
+                                Brush.linearGradient(listOf(EmberCore.copy(alpha = 0.3f), EmberPrimary.copy(alpha = 0.15f)))
+                            } else {
+                                Brush.linearGradient(listOf(SurfaceElevated, SurfaceDark))
+                            }
+                        )
+                        .border(
+                            1.dp,
+                            if (isBlocked) EmberPrimary.copy(alpha = 0.6f) else CardBorder,
+                            CircleShape
+                        )
                 ) {
                     Text(
                         text = item.name.take(1).uppercase(),
-                        color = if (isBlocked) EmberPrimary else NeonAccent,
-                        fontWeight = FontWeight.Bold,
+                        color = if (isBlocked) EmberSecondary else NeonCyan,
+                        fontWeight = FontWeight.Black,
                         fontSize = 18.sp
                     )
                 }
@@ -203,12 +245,13 @@ private fun AppRow(
                         text = item.name,
                         color = TextPrimary,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (item.isEssential) "Essentielle (Jamais bloquée)" else item.packageName,
-                        color = if (item.isEssential) EmberSecondary else TextMuted,
-                        fontSize = 11.sp
+                        text = if (item.isEssential) "Protégée (Système vital)" else item.packageName,
+                        color = if (item.isEssential) NeonViolet else TextMuted,
+                        fontSize = 11.sp,
+                        fontWeight = if (item.isEssential) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }
             }
@@ -218,8 +261,8 @@ private fun AppRow(
                     checked = isBlocked,
                     onCheckedChange = onToggle,
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = EmberPrimary,
-                        checkedTrackColor = EmberPrimary.copy(alpha = 0.4f),
+                        checkedThumbColor = TextPrimary,
+                        checkedTrackColor = EmberPrimary,
                         uncheckedThumbColor = TextMuted,
                         uncheckedTrackColor = SurfaceElevated
                     )
@@ -229,7 +272,7 @@ private fun AppRow(
     }
 }
 
-private fun getInstalledApps(context: Context, blockedList: List<String>): List<InstalledAppItem> {
+private fun getInstalledApps(context: Context): List<InstalledAppItem> {
     val pm = context.packageManager
     val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
@@ -241,7 +284,6 @@ private fun getInstalledApps(context: Context, blockedList: List<String>): List<
         context.packageName
     )
 
-    // Pre-populate standard common apps if on emulator/no third-party apps found
     val standardCommonApps = listOf(
         InstalledAppItem("Instagram", "com.instagram.android"),
         InstalledAppItem("TikTok", "com.zhiliaoapp.musically"),
