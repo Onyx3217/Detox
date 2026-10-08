@@ -71,7 +71,7 @@ data class QuotaConfig(
         QuotaCondition(type = QuotaConditionType.MAX_UNLOCKS, targetValue = 50.0),
         QuotaCondition(type = QuotaConditionType.MAX_SCREEN_TIME_MIN, targetValue = 180.0)
     ),
-    val dayStartsAt: String = "04:00"
+    val dayStartsAt: String = "00:00"
 )
 
 @Serializable

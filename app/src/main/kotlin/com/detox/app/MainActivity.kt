@@ -33,11 +33,101 @@ import com.detox.core.designsystem.theme.TextMuted
 import com.detox.core.designsystem.theme.TextPrimary
 import com.detox.core.designsystem.theme.TextSecondary
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.detox.core.designsystem.theme.BackgroundDark
+import com.detox.core.designsystem.theme.EmberPrimary
+import com.detox.core.designsystem.theme.SurfaceDark
+import com.detox.core.designsystem.theme.TextMuted
+import com.detox.core.designsystem.theme.TextPrimary
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DashboardScreen()
+            MainContainerScreen()
+        }
+    }
+}
+
+@Composable
+fun MainContainerScreen() {
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar(
+                containerColor = SurfaceDark,
+                contentColor = TextPrimary
+            ) {
+                NavigationBarItem(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    icon = { Text("📊", fontSize = 20.sp) },
+                    label = { Text("Tableau", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = EmberPrimary,
+                        selectedTextColor = EmberPrimary,
+                        unselectedIconColor = TextMuted,
+                        unselectedTextColor = TextMuted,
+                        indicatorColor = BackgroundDark
+                    )
+                )
+
+                NavigationBarItem(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    icon = { Text("📱", fontSize = 20.sp) },
+                    label = { Text("Apps", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = EmberPrimary,
+                        selectedTextColor = EmberPrimary,
+                        unselectedIconColor = TextMuted,
+                        unselectedTextColor = TextMuted,
+                        indicatorColor = BackgroundDark
+                    )
+                )
+
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = { Text("⚙️", fontSize = 20.sp) },
+                    label = { Text("Diagnostic", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = EmberPrimary,
+                        selectedTextColor = EmberPrimary,
+                        unselectedIconColor = TextMuted,
+                        unselectedTextColor = TextMuted,
+                        indicatorColor = BackgroundDark
+                    )
+                )
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when (selectedTab) {
+                0 -> DashboardScreen()
+                1 -> AppManagementScreen()
+                2 -> DiagnosticScreen()
+            }
         }
     }
 }
