@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Flame / Phoenix leaf icon in bright ember orange & cyan glow -->
+    <!-- Outer Shield / Zen shape -->
+    <path
+        android:strokeColor="#FF5722"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M54,20 C68,36 82,48 82,66 C82,82 69,92 54,92 C39,92 26,82 26,66 C26,48 40,36 54,20 Z" />
+
+    <!-- Inner Ember Flame -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M54,34 C62,45 70,55 70,67 C70,77 62,83 54,83 C46,83 38,77 38,67 C38,55 46,45 54,34 Z" />
+
+    <!-- Center Zen Dot / Core energy -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M54,64m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+</vector>

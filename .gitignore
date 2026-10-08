@@ -1,0 +1,19 @@
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Log Files
+*.log
+
+# Android Studio / IntelliJ
+.idea/
+.gradle/
+build/
+*/build/
+*.iml
+
+# OS generated
+.DS_Store
+Thumbs.db

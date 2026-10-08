@@ -1,0 +1,3 @@
+<resources>
+    <string name="accessibility_service_description">Permet à Detox de détecter l\'ouverture des applications que vous avez choisi de restreindre pour afficher l\'écran de déconnexion.</string>
+</resources>
