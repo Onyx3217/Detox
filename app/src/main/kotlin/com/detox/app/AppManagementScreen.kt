@@ -1,11 +1,15 @@
 package com.detox.app
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +22,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -38,17 +46,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import com.detox.core.designsystem.theme.BackgroundDark
 import com.detox.core.designsystem.theme.CardBorder
+import com.detox.core.designsystem.theme.DangerRed
 import com.detox.core.designsystem.theme.EmberCore
 import com.detox.core.designsystem.theme.EmberPrimary
 import com.detox.core.designsystem.theme.EmberSecondary
 import com.detox.core.designsystem.theme.NeonCyan
 import com.detox.core.designsystem.theme.NeonViolet
+import com.detox.core.designsystem.theme.SuccessGreen
 import com.detox.core.designsystem.theme.SurfaceDark
 import com.detox.core.designsystem.theme.SurfaceElevated
 import com.detox.core.designsystem.theme.TextMuted
@@ -60,31 +72,42 @@ import kotlinx.coroutines.withContext
 data class InstalledAppItem(
     val name: String,
     val packageName: String,
-    val isBlocked: Boolean = false,
-    val isEssential: Boolean = false
+    val isEssential: Boolean = false,
+    val iconDrawable: Drawable? = null
 )
 
 @Composable
 fun AppManagementScreen() {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(true) }
     val appsList = remember { mutableStateListOf<InstalledAppItem>() }
-    val blockedPackages = remember {
-        mutableStateListOf(
+    
+    // Stored preferences for selected blocked apps
+    val prefs = remember { context.getSharedPreferences("detox_blocked_apps", Context.MODE_PRIVATE) }
+    val blockedPackages = remember { mutableStateListOf<String>() }
+
+    LaunchedEffect(Unit) {
+        val savedSet = prefs.getStringSet("blocked_set", setOf(
             "com.instagram.android",
             "com.zhiliaoapp.musically",
             "com.google.android.youtube",
             "com.twitter.android",
             "com.facebook.katana"
-        )
-    }
+        )) ?: emptySet()
+        blockedPackages.clear()
+        blockedPackages.addAll(savedSet)
 
-    LaunchedEffect(Unit) {
         val loadedApps = withContext(Dispatchers.IO) {
             getInstalledApps(context)
         }
         appsList.clear()
         appsList.addAll(loadedApps)
+        isLoading = false
+    }
+
+    fun saveBlockedList() {
+        prefs.edit().putStringSet("blocked_set", blockedPackages.toSet()).apply()
     }
 
     Surface(
@@ -111,7 +134,7 @@ fun AppManagementScreen() {
                         letterSpacing = 1.5.sp
                     )
                     Text(
-                        text = "${blockedPackages.size} applications sous surveillance",
+                        text = "${blockedPackages.size} applications dans la liste de blocage",
                         color = EmberSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -119,15 +142,15 @@ fun AppManagementScreen() {
                 }
 
                 Surface(
-                    color = SurfaceDark,
-                    border = BorderStroke(1.dp, CardBorder),
+                    color = EmberCore.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, EmberPrimary.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "AUTOMATIQUE",
-                        color = NeonCyan,
+                        text = "ACTIF",
+                        color = EmberSecondary,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
@@ -136,11 +159,70 @@ fun AppManagementScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Horizontal Visual Bar: Currently Blocked Apps Avatars
+            val activeBlockedApps = appsList.filter { blockedPackages.contains(it.packageName) }
+            if (activeBlockedApps.isNotEmpty()) {
+                Text(
+                    text = "APPS VERROUILLÉES EN CAS DE DÉPASSEMENT :",
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(activeBlockedApps, key = { it.packageName }) { appItem ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.clickable {
+                                blockedPackages.remove(appItem.packageName)
+                                saveBlockedList()
+                            }
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(SurfaceDark)
+                                    .border(1.5.dp, EmberPrimary, RoundedCornerShape(14.dp))
+                            ) {
+                                if (appItem.iconDrawable != null) {
+                                    Image(
+                                        bitmap = appItem.iconDrawable.toBitmap(96, 96).asImageBitmap(),
+                                        contentDescription = appItem.name,
+                                        modifier = Modifier.size(34.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = appItem.name.take(1).uppercase(),
+                                        color = EmberSecondary,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 18.sp
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = appItem.name.take(8),
+                                color = TextSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Search Bar with glow border
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Rechercher une application...", color = TextMuted, fontSize = 13.sp) },
+                placeholder = { Text("Rechercher dans vos applications...", color = TextMuted, fontSize = 13.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -154,32 +236,42 @@ fun AppManagementScreen() {
                 shape = RoundedCornerShape(14.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            val filteredApps = appsList.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                        it.packageName.contains(searchQuery, ignoreCase = true)
-            }
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = EmberPrimary)
+                }
+            } else {
+                val filteredApps = appsList.filter {
+                    it.name.contains(searchQuery, ignoreCase = true) ||
+                            it.packageName.contains(searchQuery, ignoreCase = true)
+                }
 
-            // Apps List
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(filteredApps, key = { it.packageName }) { appItem ->
-                    AppRow(
-                        item = appItem,
-                        isBlocked = blockedPackages.contains(appItem.packageName),
-                        onToggle = { isChecked ->
-                            if (isChecked) {
-                                if (!blockedPackages.contains(appItem.packageName)) {
-                                    blockedPackages.add(appItem.packageName)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(filteredApps, key = { it.packageName }) { appItem ->
+                        val isBlocked = blockedPackages.contains(appItem.packageName)
+                        AppRow(
+                            item = appItem,
+                            isBlocked = isBlocked,
+                            onToggle = { isChecked ->
+                                if (isChecked) {
+                                    if (!blockedPackages.contains(appItem.packageName)) {
+                                        blockedPackages.add(appItem.packageName)
+                                    }
+                                } else {
+                                    blockedPackages.remove(appItem.packageName)
                                 }
-                            } else {
-                                blockedPackages.remove(appItem.packageName)
+                                saveBlockedList()
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -211,12 +303,11 @@ private fun AppRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Colored letter badge with glow
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(
                             if (isBlocked) {
                                 Brush.linearGradient(listOf(EmberCore.copy(alpha = 0.3f), EmberPrimary.copy(alpha = 0.15f)))
@@ -227,15 +318,23 @@ private fun AppRow(
                         .border(
                             1.dp,
                             if (isBlocked) EmberPrimary.copy(alpha = 0.6f) else CardBorder,
-                            CircleShape
+                            RoundedCornerShape(12.dp)
                         )
                 ) {
-                    Text(
-                        text = item.name.take(1).uppercase(),
-                        color = if (isBlocked) EmberSecondary else NeonCyan,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 18.sp
-                    )
+                    if (item.iconDrawable != null) {
+                        Image(
+                            bitmap = item.iconDrawable.toBitmap(96, 96).asImageBitmap(),
+                            contentDescription = item.name,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    } else {
+                        Text(
+                            text = item.name.take(1).uppercase(),
+                            color = if (isBlocked) EmberSecondary else NeonCyan,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(14.dp))
@@ -274,7 +373,12 @@ private fun AppRow(
 
 private fun getInstalledApps(context: Context): List<InstalledAppItem> {
     val pm = context.packageManager
-    val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+    
+    // Explicit Launcher Intent query (Guaranteed to return all user-facing installed apps)
+    val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+        addCategory(Intent.CATEGORY_LAUNCHER)
+    }
+    val resolveInfos = pm.queryIntentActivities(mainIntent, 0)
 
     val essentialList = setOf(
         "com.android.dialer",
@@ -284,33 +388,44 @@ private fun getInstalledApps(context: Context): List<InstalledAppItem> {
         context.packageName
     )
 
-    val standardCommonApps = listOf(
-        InstalledAppItem("Instagram", "com.instagram.android"),
-        InstalledAppItem("TikTok", "com.zhiliaoapp.musically"),
-        InstalledAppItem("YouTube", "com.google.android.youtube"),
-        InstalledAppItem("WhatsApp", "com.whatsapp"),
-        InstalledAppItem("Twitter / X", "com.twitter.android"),
-        InstalledAppItem("Snapchat", "com.snapchat.android"),
-        InstalledAppItem("Facebook", "com.facebook.katana"),
-        InstalledAppItem("Téléphone", "com.android.dialer", isEssential = true),
-        InstalledAppItem("Paramètres", "com.android.settings", isEssential = true)
-    )
+    val items = mutableListOf<InstalledAppItem>()
+    val seenPackages = mutableSetOf<String>()
 
-    val realApps = packages.filter { app ->
-        (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || essentialList.contains(app.packageName)
-    }.map { app ->
-        val name = pm.getApplicationLabel(app).toString()
-        val isEssential = essentialList.contains(app.packageName)
-        InstalledAppItem(
-            name = name,
-            packageName = app.packageName,
-            isEssential = isEssential
+    for (info in resolveInfos) {
+        val pkg = info.activityInfo.packageName
+        if (seenPackages.contains(pkg)) continue
+        seenPackages.add(pkg)
+
+        val name = info.loadLabel(pm).toString()
+        val icon = try { info.loadIcon(pm) } catch (e: Exception) { null }
+        val isEssential = essentialList.contains(pkg)
+
+        items.add(
+            InstalledAppItem(
+                name = name,
+                packageName = pkg,
+                isEssential = isEssential,
+                iconDrawable = icon
+            )
         )
     }
 
-    return if (realApps.size > 2) {
-        realApps.sortedWith(compareBy({ !it.isEssential }, { it.name }))
-    } else {
-        standardCommonApps
+    if (items.isEmpty()) {
+        // Fallback for emulators/edge cases
+        val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        for (app in packages) {
+            val pkg = app.packageName
+            val isEssential = essentialList.contains(pkg)
+            items.add(
+                InstalledAppItem(
+                    name = pm.getApplicationLabel(app).toString(),
+                    packageName = pkg,
+                    isEssential = isEssential,
+                    iconDrawable = try { pm.getApplicationIcon(app) } catch (e: Exception) { null }
+                )
+            )
+        }
     }
+
+    return items.sortedWith(compareBy({ !it.isEssential }, { it.name }))
 }

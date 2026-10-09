@@ -132,7 +132,7 @@ fun DiagnosticScreen() {
 
             PermissionCard(
                 title = "Service d'Accessibilité",
-                isGranted = false,
+                isGranted = status.isAccessibilityEnabled,
                 description = "Indispensable pour intercepter les ouvertures d'applications non autorisées.",
                 badgeText = "Accessibility",
                 onAction = {
